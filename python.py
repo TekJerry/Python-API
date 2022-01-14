@@ -3,7 +3,7 @@ from flask import request
 from flask import jsonify   
 
 from peewee import *        
-from playhouse.shortcuts import model_to_dict   
+from playhouse.shortcuts import model_to_dict, dict_to_model
 
 db = PostgresqlDatabase('cocktails', user='postgres', password='pass123', host='localhost', port=5432)
 
@@ -25,8 +25,8 @@ db.create_tables([Drink])
 
 paloma = Drink(name='Paloma',instructions='Stir together and serve over ice.',glass='Collins glass',ingredients='Grapefruit Soda, Tequila',thumbnail='https://www.thecocktaildb.com/images/media/drink/samm5j1513706393.jpg',alcoholic='Alcoholic Beverage')
 pink_gin = Drink(name='Pink Gin',instructions='Pour the bitters into a wine glass. Swirl the glass to coat the inside with the bitters, shake out the excess. Pour the gin into the glass. Do not add ice.',glass='White wine glass',ingredients='Bitters, Gin',thumbnail='https://www.thecocktaildb.com/images/media/drink/qyr51e1504888618.jpg',alcoholic='Alcoholic Beverage')
-radler = Drink(name='Radler',instructions='Pour beer into large mug, slowly add the 7-up (or Sprite).',glass='Highball Glass',ingredients='Beer, 7-up',thumbnail='https://www.thecocktaildb.com/images/media/drink/xz8igv1504888995.jpg',alcoholic='Alcohlic Bevarage')
-rum_sour = Drink(name='Rum Sour',instructions='In a shaker half-filled with ice cubes, combine the rum, lemon juice, and sugar. Shake well. Strain into a sour glass and garnish with the orange slice and the cherry.',glass='',ingredients='Light Rum, Lemon Juice, Sugar, Orange, Maraschino Cherry',thumbnail='https://www.thecocktaildb.com/images/media/drink/bylfi21504886323.jpg',alcoholic='Alcoholic Beverage')
+radler = Drink(name='Radler',instructions='Pour beer into large mug, slowly add the 7-up (or Sprite).',glass='Highball Glass',ingredients='Beer, 7-up',thumbnail='https://www.thecocktaildb.com/images/media/drink/xz8igv1504888995.jpg',alcoholic='Alcoholic Bevarage')
+rum_sour = Drink(name='Rum Sour',instructions='In a shaker half-filled with ice cubes, combine the rum, lemon juice, and sugar. Shake well. Strain into a sour glass and garnish with the orange slice and the cherry.',glass='Collins Glass',ingredients='Light Rum, Lemon Juice, Sugar, Orange, Maraschino Cherry',thumbnail='https://www.thecocktaildb.com/images/media/drink/bylfi21504886323.jpg',alcoholic='Alcoholic Beverage')
 rum_punch = Drink(name='Rum Punch',instructions='Mix all ingredients in a punch bowl and serve.',glass='Punch Bowl',ingredients='Rum, Ginger Ale, Fruit Punch, Orange Juice, Ice',thumbnail='https://www.thecocktaildb.com/images/media/drink/wyrsxu1441554538.jpg',alcoholic='Alcoholic Beverage')
 dragonfly = Drink(name='Dragonfly',instructions='In a highball glass almost filled with ice cubes, combine the gin and ginger ale. Stir well. Garnish with the lime wedge.',glass='Highball Glass',ingredients='Gin, Ginger Ale, Lime',thumbnail='https://www.thecocktaildb.com/images/media/drink/uc63bh1582483589.jpg',alcoholic='Alcoholic Beverage')
 dry_martini = Drink(name='Dry Martini',instructions='Straight: Pour all ingredients into mixing glass with ice cubes. Stir well. Strain in chilled martini cocktail glass. Squeeze oil from lemon peel onto the drink, or garnish with olive.',glass='Cocktail Glass',ingredients='Gin, Dry Vermouth, Olive',thumbnail='https://www.thecocktaildb.com/images/media/drink/6ck9yi1589574317.jpg',alcoholic='Alcoholic Beverage')
@@ -34,7 +34,7 @@ dark_and_stormy = Drink(name='Dark and Stormy',instructions='In a highball glass
 ice_pick = Drink(name='Ice Pick',instructions='Put Vodka in glass fill with iced tea. Stir in lemon to taste.',glass='Collins Glass',ingredients='Vodka, Iced Tea, Lemon Juice',thumbnail='https://www.thecocktaildb.com/images/media/drink/ypsrqp1469091726.jpg',alcoholic='Alcoholic Beverage')
 imperial_cocktail= Drink(name='Imperial Cocktail',instructions='Shake with ice and strain into cocktail glass.',glass='Cocktail Glass',ingredients='Lime Juice, Gin, Aperol',thumbnail='https://www.thecocktaildb.com/images/media/drink/bcsj2e1487603625.jpg',alcoholic='Alcoholic Beverage')
 yellow_bird= Drink(name='Yellow Bird',instructions='Shake and strain into a chilled cocktail glass',glass='Cocktail Glass',ingredients='White Rum, Galliano, Triple Sec, Lime Juice',thumbnail='https://www.thecocktaildb.com/images/media/drink/2t9r6w1504374811.jpg',alcoholic='Alcoholic Beverage')
-smut= Drink(name='Smut',instructions='Throw it all together and serve real cold.',glass='Beer Mug',ingredients='Red Wine , Peach schnapps, Pepsi Cola, Orange Juice',thumbnail='https://www.thecocktaildb.com/images/media/drink/rx8k8e1504365812.jpg',alcoholic='Alcoholic')
+smut= Drink(name='Smut',instructions='Throw it all together and serve real cold.',glass='Beer Mug',ingredients='Red Wine , Peach schnapps, Pepsi Cola, Orange Juice',thumbnail='https://www.thecocktaildb.com/images/media/drink/rx8k8e1504365812.jpg',alcoholic='Alcoholic Beverage')
 spritz= Drink(name='Spritz',instructions='Build into glass over ice, garnish and serve.',glass='Old-Fashioned Glass',ingredients='Prosecco, Campari, Soda Water',thumbnail='https://www.thecocktaildb.com/images/media/drink/j9evx11504373665.jpg',alcoholic='Alcoholic Beverage')
 shot_gun= Drink(name='Shot-Gun',instructions='Pour one part Jack Daneils and one part Jim Beam into shot glass then float Wild Turkey on top.',glass='Shot Glass',ingredients='Jim Beam, Jack Daniels, Wild Turkey',thumbnail='https://www.thecocktaildb.com/images/media/drink/2j1m881503563583.jpg',alcoholic='Alcoholic Beverage')
 sea_breeze= Drink(name='Sea Breeze',instructions='Build all ingredients in a highball glass filled with ice. Garnish with lime wedge.',glass='Highball Glass',ingredients='Vodka, Cranberry Juice, Grape',thumbnail='https://www.thecocktaildb.com/images/media/drink/7rfuks1504371562.jpg',alcoholic='Alcoholic Beverage')
@@ -68,16 +68,52 @@ sherry_eggnog.save()
 app = Flask(__name__)
 
 
-@app.route('/cocktails', methods= ['GET'])
-def cocktail(id=None):
-  if id:
-    cocktail = Drink.get(Drink.id == id)
+@app.route('/cocktails', methods= ['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/cocktails/<id>', methods = ['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/cocktails/<name>', methods = ['GET'])
+def cocktail(id=None, name=None):
+
+  if request.method == 'GET':
+    if id:
+      cocktail = Drink.get(Drink.id == id)
+      cocktail = model_to_dict(cocktail)
+      return jsonify(cocktail)
+    if name:
+      cocktail = Drink.get(Drink.name == name)
+      cocktail = model_to_dict(cocktail)
+      return jsonify(cocktail)
+    else:
+      cocktails = []
+      for cocktail in Drink.select():
+        cocktails.append(model_to_dict(cocktail))
+      return jsonify(cocktails)
+  
+  if request.method == 'POST':
+    cocktail = request.get_json()
+    cocktail = dict_to_model(Drink, cocktail)
+    cocktail.save()
     cocktail = model_to_dict(cocktail)
-    return jsonify(cocktail)
-  else:
-    cocktails = []
-    for cocktail in Drink.select():
-      cocktails.append(model_to_dict(cocktail))
-    return jsonify(cocktails)
+    cocktail = jsonify(cocktail)
+    return cocktail
+  
+  if request.method == 'DELETE':
+    cocktail = Drink.get(Drink.id == id)
+    cocktail.delete_instance()
+    return jsonify({"deleted": True})
+
+  if request.method == 'PUT':
+    updated_cocktail = request.get_json()
+    cocktail = Drink.get(Drink.id == id)
+    cocktail.name = updated_cocktail['name']
+    cocktail.instructions = updated_cocktail['instructions']
+    cocktail.glass = updated_cocktail['glass']
+    cocktail.ingredients = updated_cocktail['ingredients']
+    cocktail.thumbnail = updated_cocktail['thumbnail']
+    cocktail.alcoholic = updated_cocktail['alcoholic']
+    cocktail.save()
+    cocktail = model_to_dict(cocktail)
+    cocktail = jsonify(cocktail)
+    return cocktail
+
 
 app.run(port=9000, debug=True)
